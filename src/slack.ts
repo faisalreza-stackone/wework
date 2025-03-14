@@ -34,60 +34,36 @@ export async function sendCombinedSlackNotification(
     try {
         logWithTimestamp('Sending combined desk availability notification to Slack...');
         
-        // Create attachments for each date
-        const attachments = results.map(result => {
+        // Create message sections for each date
+        const sections = results.map(result => {
             const dateString = formatDateToString(result.date);
             const formattedDate = formatDate(dateString);
             
             // Create the message text
-            let messageText = '';
-            let color = '';
+            let statusText = '';
+            let emoji = '';
             
             if (result.isAvailable) {
-                color = 'good'; // green
+                emoji = "✅";
                 if (result.desksCount !== undefined) {
-                    messageText = `✅ *${result.desksCount} desks available* on ${formattedDate}`;
+                    statusText = `*${result.desksCount} desks available*`;
                 } else {
-                    messageText = `✅ *Desks are available* on ${formattedDate}`;
+                    statusText = `*Desks are available*`;
                 }
             } else {
-                color = 'danger'; // red
-                messageText = `❌ *No desks available* on ${formattedDate}`;
+                emoji = "❌";
+                statusText = `*No desks available*`;
             }
             
-            return {
-                color: color,
-                text: messageText,
-                fields: [
-                    {
-                        title: 'Date',
-                        value: formattedDate,
-                        short: true
-                    }
-                ]
-            };
-        });
+            return `${emoji} ${formattedDate}: ${statusText}`;
+        }).join('\n');
         
-        // Add a final attachment with the Book Desk button
-        attachments.push({
-            color: "#3AA3E3",
-            callback_id: "book_desk_action",
-            actions: [
-                {
-                    type: "button",
-                    text: "Book Desk",
-                    url: config.loginUrl,
-                    style: "primary"
-                }
-            ]
-        });
+        // Add a link to book a desk
+        const bookingLink = `\n\n<${config.loginUrl}|*Click here to book a desk*>`;
         
         // Create the Slack message payload
         const payload = {
-            text: `*WeWork Desk Availability Update for ${locationName}*`,
-            attachments: attachments,
-            footer: 'WeWork Desk Booking Automation',
-            ts: Math.floor(Date.now() / 1000)
+            text: `*WeWork Desk Availability for ${locationName}*\n\n${sections}${bookingLink}`
         };
         
         // Send the message to Slack
